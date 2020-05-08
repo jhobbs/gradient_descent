@@ -4,6 +4,17 @@ import sympy as sym
 import sys
 from sympy.abc import x, y
 import math
+import numpy as np
+import matplotlib.pyplot as plt
+import mpl_toolkits.mplot3d.axes3d as p3
+import matplotlib.animation as animation
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
+from matplotlib import cm
+from numpy import *
+import random
+
+
+
 
 def get_args():
     parser = ArgumentParser("3d gradient descent.")
@@ -13,37 +24,73 @@ def get_args():
     parser.add_argument("--precision", type=float, help="target precision.", default=0.00001)
     parser.add_argument("--learning_rate",type=float, help="learning rate.", default=0.1)
     parser.add_argument("--max_iters", type=float, help="maximum iterations", default=10000)
+    parser.add_argument("--min_x", type=float, help="maximum x value", default=0)
+    parser.add_argument("--max_x", type=float, help="minimum x value", default=5)
+    parser.add_argument("--min_y", type=float, help="maximum y value", default=0)
+    parser.add_argument("--max_y", type=float, help="minimum y value", default=5)
+    parser.add_argument("--min_z", type=float, help="maximum z value", default=0)
+    parser.add_argument("--max_z", type=float, help="minimum z value", default=5)
+    parser.add_argument("--azimuth", type=float, help="viewing azimuth", default=90)
     return parser.parse_args()
 
 
 class Descender():
 
-    def __init__(self, function, start_x, start_y, precision, learning_rate, max_iters):
+    def __init__(self, function, start_x, start_y, precision, learning_rate, max_iters, min_x, max_x, min_y, max_y):
+        self._orig_x = start_x
+        self._orig_y = start_y
+        self._min_x = min_x
+        self._max_x = max_x
+        self._min_y = min_y
+        self._max_y = max_y
         self._dx = sym.diff(function, x)
         self._dy = sym.diff(function, y)
         self._f = sym.sympify(function)
-        self._cur_x = start_x
-        self._cur_y = start_y
         self._precision = precision
         self._learning_rate = learning_rate
-        self._previous_step_size = precision + 1  # just so it's bigger than precision
         self._max_iters = max_iters
+        self.reset()
+
+    def reset(self):
+        self._cur_x = self._orig_x
+        self._cur_y = self._orig_y
+        self._previous_step_size = self._precision + 1  # just so it's bigger than precision
         self._iters = 0
+
+    def in_bounds(self, x, y):
+        return self._min_x <= x <= self._max_x and self._min_x <= y <= self._max_x
 
     @property
     def complete(self):
-        return self._previous_step_size <= self._precision or self._iters >= self._max_iters
+        return self._previous_step_size <= self._precision or self._iters >= self._max_iters or not self.in_bounds(self.next_x, self.next_y)
 
+    @property
+    def _cur_z(self):
+        return float(self._f.subs([('x', self._cur_x), ('y', self._cur_y)]))
+
+    @property
+    def dxn(self):
+        return float(self._dx.subs([('x', self._cur_x), ('y', self._cur_y)]))
+    
+    @property
+    def dyn(self):
+        return float(self._dy.subs([('x', self._cur_x), ('y', self._cur_y)]))
+
+    @property
+    def next_x(self):
+        return self._cur_x - self._learning_rate * self.dxn
+    
+    @property
+    def next_y(self):
+        return self._cur_y - self._learning_rate * self.dyn
 
     def iterate(self):
         prev_x = self._cur_x
         prev_y = self._cur_y
-        dxn = float(self._dx.subs([('x', prev_x), ('y', prev_y)]))
-        dyn = float(self._dy.subs([('x', prev_x), ('y', prev_y)]))
-        self._cur_x = self._cur_x - self._learning_rate * dxn
-        self._cur_y = self._cur_y - self._learning_rate * dyn
-        cur_zf = self._f.subs([('x', self._cur_x), ('y', self._cur_y)])
-        self._cur_z = float(self._f.subs([('x', self._cur_x), ('y', self._cur_y)]))
+        dxn = self.dxn
+        dyn = self.dyn
+        self._cur_x = self.next_x
+        self._cur_y = self.next_y
         # distance formula
         self._previous_step_size = math.sqrt((self._cur_x - prev_x)**2 + (self._cur_y - prev_y)**2)
         self._iters = self._iters + 1
@@ -60,12 +107,61 @@ class Descender():
 
 def main():
     args = get_args()
-    descender = Descender(args.function, args.start_x, args.start_y, args.precision, args.learning_rate, args.max_iters)
+    descender = Descender(args.function, args.start_x, args.start_y, args.precision, args.learning_rate, args.max_iters, args.min_x, args.max_x, args.min_y, args.max_y)
 
-    while not descender.complete:
-        descender.iterate()
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
 
-    descender.print_final()
+
+    # Make data.
+    X = np.arange(args.min_x, args.max_x, 0.25)
+    Y = np.arange(args.min_y, args.max_y, 0.25)
+    X, Y = np.meshgrid(X, Y)
+    numpified = args.function.replace('x', 'X').replace('y', 'Y')
+    Z = eval(numpified)
+
+    def start_drawing():
+        ax.set_title(f"{args.function} over [(x,y) | {args.min_x} <= x <= {args.max_x}, {args.min_y} <= y <= {args.max_y}]")
+        ax.set_xlabel(r'x')
+        ax.set_ylabel(r'y')
+        ax.set_zlabel(r'z')
+        ax.set_zlim(args.min_z, args.max_z)
+        ax.zaxis.set_major_locator(LinearLocator(10))
+        ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
+#        surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
+#        linewidth=0, antialiased=True)
+        surf = ax.plot_wireframe(X, Y, Z, antialiased=True)
+        
+
+    # Plot the surface.
+    def init():
+        start_drawing()
+        ax.view_init(elev=40, azim=args.azimuth)
+
+        return fig,
+
+    def animate(i):
+        # azimuth angle : 0 deg to 360 deg
+        ax.scatter([descender._cur_x], [descender._cur_y], [descender._cur_z], linewidth=5)
+        if not(descender.complete):
+            descender.iterate()
+        if descender.complete:
+            descender.print_final()
+            descender.reset()
+            descender._cur_x = random.uniform(args.min_x, args.max_x)
+            descender._cur_y = random.uniform(args.min_y, args.max_y)
+            ax.clear()
+            start_drawing()
+        return fig,
+
+       
+
+    # Customize the z axis.
+    ani = animation.FuncAnimation(fig, animate, init_func=init, interval=5)
+
+    plt.show()
+
+
 
 
 if __name__ == '__main__':
