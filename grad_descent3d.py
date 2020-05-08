@@ -49,11 +49,16 @@ class Descender:
         self._precision = precision
         self._learning_rate = learning_rate
         self._max_iters = max_iters
+    
         self.reset()
 
-    def reset(self):
-        self._cur_x = random.uniform(self._min_x, self._max_x)
-        self._cur_y = random.uniform(self._min_y, self._max_y)
+    def reset(self, x=None, y=None):
+        if x is not None and y is not None:
+            self._cur_x = x
+            self._cur_y = y
+        else:
+            self._cur_x = random.uniform(self._min_x, self._max_x)
+            self._cur_y = random.uniform(self._min_y, self._max_y)
         self._previous_step_size = (
             self._precision + 1
         )  # just so it's bigger than precision
