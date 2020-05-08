@@ -19,26 +19,22 @@ import random
 def get_args():
     parser = ArgumentParser("3d gradient descent.")
     parser.add_argument("function", help="the function to work on.")
-    parser.add_argument("start_x", type=float, help="starting x-coordinate.")
-    parser.add_argument("start_y", type=float, help="starting y-coordinate.")
     parser.add_argument("--precision", type=float, help="target precision.", default=0.00001)
     parser.add_argument("--learning_rate",type=float, help="learning rate.", default=0.1)
     parser.add_argument("--max_iters", type=float, help="maximum iterations", default=10000)
-    parser.add_argument("--min_x", type=float, help="maximum x value", default=0)
-    parser.add_argument("--max_x", type=float, help="minimum x value", default=5)
-    parser.add_argument("--min_y", type=float, help="maximum y value", default=0)
-    parser.add_argument("--max_y", type=float, help="minimum y value", default=5)
-    parser.add_argument("--min_z", type=float, help="maximum z value", default=0)
-    parser.add_argument("--max_z", type=float, help="minimum z value", default=5)
+    parser.add_argument("--min_x", type=float, help="maximum x value", default=-2)
+    parser.add_argument("--max_x", type=float, help="minimum x value", default=2)
+    parser.add_argument("--min_y", type=float, help="maximum y value", default=-2)
+    parser.add_argument("--max_y", type=float, help="minimum y value", default=2)
+    parser.add_argument("--min_z", type=float, help="maximum z value", default=-2)
+    parser.add_argument("--max_z", type=float, help="minimum z value", default=2)
     parser.add_argument("--azimuth", type=float, help="viewing azimuth", default=90)
     return parser.parse_args()
 
 
 class Descender():
 
-    def __init__(self, function, start_x, start_y, precision, learning_rate, max_iters, min_x, max_x, min_y, max_y):
-        self._orig_x = start_x
-        self._orig_y = start_y
+    def __init__(self, function, precision, learning_rate, max_iters, min_x, max_x, min_y, max_y):
         self._min_x = min_x
         self._max_x = max_x
         self._min_y = min_y
@@ -52,8 +48,8 @@ class Descender():
         self.reset()
 
     def reset(self):
-        self._cur_x = self._orig_x
-        self._cur_y = self._orig_y
+        self._cur_x = random.uniform(self._min_x, self._max_x)
+        self._cur_y = random.uniform(self._min_y, self._max_y)
         self._previous_step_size = self._precision + 1  # just so it's bigger than precision
         self._iters = 0
 
@@ -107,7 +103,7 @@ class Descender():
 
 def main():
     args = get_args()
-    descender = Descender(args.function, args.start_x, args.start_y, args.precision, args.learning_rate, args.max_iters, args.min_x, args.max_x, args.min_y, args.max_y)
+    descender = Descender(args.function, args.precision, args.learning_rate, args.max_iters, args.min_x, args.max_x, args.min_y, args.max_y)
 
     fig = plt.figure()
     ax = fig.gca(projection='3d')
@@ -130,7 +126,7 @@ def main():
         ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
 #        surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
 #        linewidth=0, antialiased=True)
-        surf = ax.plot_wireframe(X, Y, Z, antialiased=True)
+        surf = ax.plot_wireframe(X, Y, Z, antialiased=True, cstride=1, rstride=1)
         
 
     # Plot the surface.
@@ -148,8 +144,6 @@ def main():
         if descender.complete:
             descender.print_final()
             descender.reset()
-            descender._cur_x = random.uniform(args.min_x, args.max_x)
-            descender._cur_y = random.uniform(args.min_y, args.max_y)
             ax.clear()
             start_drawing()
         return fig,

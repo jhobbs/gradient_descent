@@ -1,0 +1,8 @@
+# the default function from calc plot3d
+python3 grad_descent3d.py  "7*x*y/2.719**(x**2 + y**2)"   --learning_rate 0.1 --azimuth 90  --precision 0.01 --max_iters 100
+
+# elipitcal paraballoid
+python3 grad_descent3d.py  "(x**2 + y**2)"  --max_z 4 --learning_rate 0.1 --azimuth 90  --precision 0.01 --max_iters 100
+
+# bumpy
+python3 grad_descent3d.py  "cos(x)-cos(y)"  --max_z 4 --learning_rate 0.25 --azimuth 90  --precision 0.01 --min_x -8 --max_x 8 --min_y -8 --max_y 8 --min_z -1 --max_z 1
