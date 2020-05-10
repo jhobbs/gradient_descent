@@ -2,7 +2,10 @@
 python3 grad_descent3d.py  "7*x*y/2.719**(x**2 + y**2)"
 
 # elipitcal paraballoid
-python3 grad_descent3d.py  "(x**2 + y**2)"
+python3 grad_descent3d.py  "(x**2 + y**2)" --min_z 0
 
 # bumpy
 python3 grad_descent3d.py  "cos(x)-cos(y)"  --min_x -8 --max_x 8 --min_y -8 --max_y 8 --min_z -1 --max_z 1
+
+# ridges
+python3 grad_descent3d.py  "sin(x**2+y**2)"

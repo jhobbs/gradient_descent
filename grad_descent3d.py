@@ -10,8 +10,12 @@ import mpl_toolkits.mplot3d.axes3d as p3
 import matplotlib.animation as animation
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 from matplotlib import cm
+from matplotlib.widgets import Slider
 from numpy import *
 import random
+
+
+eXp = exp
 
 
 def get_args():
@@ -54,15 +58,15 @@ class Descender:
 
     def reset(self, x=None, y=None):
         if x is not None and y is not None:
-            self._cur_x = x
+            self.cur_x = x
             self._cur_y = y
         else:
-            self._cur_x = random.uniform(self._min_x, self._max_x)
+            self.cur_x = random.uniform(self._min_x, self._max_x)
             self._cur_y = random.uniform(self._min_y, self._max_y)
         self._previous_step_size = (
             self._precision + 1
         )  # just so it's bigger than precision
-        self._iters = 0
+        self.iters = 0
 
     def in_bounds(self, x, y):
         return self._min_x <= x <= self._max_x and self._min_x <= y <= self._max_x
@@ -71,52 +75,52 @@ class Descender:
     def complete(self):
         return (
             self._previous_step_size <= self._precision
-            or self._iters >= self._max_iters
+            or self.iters >= self._max_iters
             or not self.in_bounds(self.next_x, self.next_y)
         )
 
     @property
-    def _cur_z(self):
-        return float(self._f.subs([("x", self._cur_x), ("y", self._cur_y)]))
+    def cur_z(self):
+        return float(self._f.subs([("x", self.cur_x), ("y", self._cur_y)]))
 
     @property
     def dxn(self):
-        return float(self._dx.subs([("x", self._cur_x), ("y", self._cur_y)]))
+        return float(self._dx.subs([("x", self.cur_x), ("y", self._cur_y)]))
 
     @property
     def dyn(self):
-        return float(self._dy.subs([("x", self._cur_x), ("y", self._cur_y)]))
+        return float(self._dy.subs([("x", self.cur_x), ("y", self._cur_y)]))
 
     @property
     def next_x(self):
-        return self._cur_x - self._learning_rate * self.dxn
+        return self.cur_x - self._learning_rate * self.dxn
 
     @property
     def next_y(self):
         return self._cur_y - self._learning_rate * self.dyn
 
     def iterate(self):
-        prev_x = self._cur_x
+        prev_x = self.cur_x
         prev_y = self._cur_y
         dxn = self.dxn
         dyn = self.dyn
-        self._cur_x = self.next_x
+        self.cur_x = self.next_x
         self._cur_y = self.next_y
         # distance formula
         self._previous_step_size = math.sqrt(
-            (self._cur_x - prev_x) ** 2 + (self._cur_y - prev_y) ** 2
+            (self.cur_x - prev_x) ** 2 + (self._cur_y - prev_y) ** 2
         )
-        self._iters = self._iters + 1
-        if self._iters <= 25:
-            print(
-                f"iter: {self._iters}, (x, y): ({prev_x:0.4f},{prev_y:0.4f}) f(x,y): {self._cur_z:0.4f}) ∇f(x,y) = <{dxn:0.4f}, {dyn:0.4f}>"
-            )
-        elif self._iters == 26:
+        self.iters = self.iters + 1
+        pos_str = f"iter: {self.iters}, (x, y): ({prev_x:0.4f},{prev_y:0.4f}) f(x,y): {self.cur_z:0.4f}) ∇f(x,y) = <{dxn:0.4f}, {dyn:0.4f}>"
+        if self.iters <= 25:
+            print(pos_str)
+        elif self.iters == 26:
             print("...")
+        return pos_str
 
     def print_final(self):
         print(
-            f"the minimum (after {self._iters} iterations) is {self._cur_z:0.4f} and occurs at ({self._cur_x:0.4f}, {self._cur_y:0.4f})"
+            f"the minimum (after {self.iters} iterations) is {self.cur_z:0.4f} and occurs at ({self.cur_x:0.4f}, {self._cur_y:0.4f})"
         )
 
 
@@ -135,6 +139,20 @@ def main():
 
     fig = plt.figure()
     ax = fig.gca(projection="3d")
+    slider_ax = plt.axes([0.1, 0.1, 0.8, 0.02])
+    def update_lr(rate):
+        descender._learning_rate = rate
+    lr_slider = Slider(slider_ax, 'Learning Rate', 0, 1.1, valinit=args.learning_rate)
+    lr_slider.on_changed(update_lr)
+
+    pr_slider_ax = plt.axes([0.1, 0.05, 0.8, 0.02])
+    def update_precision(precision):
+        descender._precision = precision
+    pr_slider = Slider(pr_slider_ax, 'Precision', 0, 0.5, valinit=args.precision)
+    pr_slider.on_changed(update_precision)
+
+
+
 
     # Make data.
     X = np.arange(args.min_x, args.max_x, 0.25)
@@ -153,6 +171,7 @@ def main():
         ax.set_zlim(args.min_z, args.max_z)
         ax.zaxis.set_major_locator(LinearLocator(10))
         ax.zaxis.set_major_formatter(FormatStrFormatter("%.02f"))
+        surf = ax.plot_surface(X, Y, Z, antialiased=True, cstride=1, rstride=1, alpha=0.1, zorder=5)
         surf = ax.plot_wireframe(X, Y, Z, antialiased=True, cstride=1, rstride=1)
 
     # Plot the surface.
@@ -161,14 +180,18 @@ def main():
         ax.view_init(elev=40, azim=0)
         return (fig,)
 
+    gradient_text = plt.gcf().text(0.05, 0.01, "", fontsize=12)
+    max_text = plt.gcf().text(0.75, 0.01, "", fontsize=12)
     def animate(i):
         ax.scatter(
-            [descender._cur_x], [descender._cur_y], [descender._cur_z], linewidth=5
+            [descender.cur_x], [descender._cur_y], [descender.cur_z], linewidth=5,zorder=1
         )
         if not (descender.complete):
-            descender.iterate()
+            textstr = descender.iterate()
+            gradient_text.set_text(textstr)
         if descender.complete:
             descender.print_final()
+            max_text.set_text(f"min: {descender.cur_z:0.05f} after {descender.iters} steps")
             descender.reset()
             ax.clear()
             start_drawing()
