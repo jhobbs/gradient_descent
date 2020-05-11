@@ -51,7 +51,7 @@ class Descender:
         self._precision = precision
         self._learning_rate = learning_rate
         self._max_iters = max_iters
-    
+
         self.reset()
 
     def reset(self, new_x=None, new_y=None):
@@ -142,17 +142,20 @@ def main():
     fig = plt.figure()
     ax = fig.gca(projection="3d")
     slider_ax = plt.axes([0.1, 0.1, 0.8, 0.02])
+
     def update_lr(rate):
         descender._learning_rate = rate
-    lr_slider = Slider(slider_ax, 'Learning Rate', 0, 1.1, valinit=args.learning_rate)
+
+    lr_slider = Slider(slider_ax, "Learning Rate", 0, 1.1, valinit=args.learning_rate)
     lr_slider.on_changed(update_lr)
 
     pr_slider_ax = plt.axes([0.1, 0.05, 0.8, 0.02])
+
     def update_precision(precision):
         descender._precision = precision
-    pr_slider = Slider(pr_slider_ax, 'Precision', 0, 0.5, valinit=args.precision)
-    pr_slider.on_changed(update_precision)
 
+    pr_slider = Slider(pr_slider_ax, "Precision", 0, 0.5, valinit=args.precision)
+    pr_slider.on_changed(update_precision)
 
     def submit_function(function_string):
         try:
@@ -166,9 +169,8 @@ def main():
         ax.clear()
         start_drawing(function_string)
 
-
     text_axes = plt.axes([0.1, 0.9, 0.8, 0.03])
-    text_box = TextBox(text_axes, 'Evaluate', initial=args.function)
+    text_box = TextBox(text_axes, "Evaluate", initial=args.function)
     text_box.on_submit(submit_function)
 
     def start_drawing(input_function):
@@ -188,7 +190,9 @@ def main():
         ax.set_zlim(args.min_z, args.max_z)
         ax.zaxis.set_major_locator(LinearLocator(10))
         ax.zaxis.set_major_formatter(FormatStrFormatter("%.02f"))
-        surf = ax.plot_surface(X, Y, Z, antialiased=True, cstride=1, rstride=1, alpha=0.1, zorder=5)
+        surf = ax.plot_surface(
+            X, Y, Z, antialiased=True, cstride=1, rstride=1, alpha=0.1, zorder=5
+        )
         surf = ax.plot_wireframe(X, Y, Z, antialiased=True, cstride=1, rstride=1)
 
     # Plot the surface.
@@ -199,16 +203,23 @@ def main():
 
     gradient_text = plt.gcf().text(0.05, 0.01, "", fontsize=12)
     max_text = plt.gcf().text(0.75, 0.01, "", fontsize=12)
+
     def animate(i):
         ax.scatter(
-            [descender.cur_x], [descender._cur_y], [descender.cur_z], linewidth=5,zorder=1
+            [descender.cur_x],
+            [descender._cur_y],
+            [descender.cur_z],
+            linewidth=5,
+            zorder=1,
         )
         if not (descender.complete):
             textstr = descender.iterate()
             gradient_text.set_text(textstr)
         if descender.complete:
             descender.print_final()
-            max_text.set_text(f"min: {descender.cur_z:0.05f} after {descender.iters} steps")
+            max_text.set_text(
+                f"min: {descender.cur_z:0.05f} after {descender.iters} steps"
+            )
             descender.reset()
             ax.clear()
             start_drawing(descender.function)
