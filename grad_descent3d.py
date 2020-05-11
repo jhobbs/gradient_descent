@@ -10,7 +10,7 @@ import mpl_toolkits.mplot3d.axes3d as p3
 import matplotlib.animation as animation
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 from matplotlib import cm
-from matplotlib.widgets import Slider
+from matplotlib.widgets import Slider, TextBox
 from numpy import *
 import random
 
@@ -43,23 +43,25 @@ class Descender:
     def __init__(
         self, function, precision, learning_rate, max_iters, min_x, max_x, min_y, max_y
     ):
+        self.function = function
         self._min_x = min_x
         self._max_x = max_x
         self._min_y = min_y
         self._max_y = max_y
-        self._dx = sym.diff(function, x)
-        self._dy = sym.diff(function, y)
-        self._f = sym.sympify(function)
         self._precision = precision
         self._learning_rate = learning_rate
         self._max_iters = max_iters
     
         self.reset()
 
-    def reset(self, x=None, y=None):
-        if x is not None and y is not None:
-            self.cur_x = x
-            self._cur_y = y
+    def reset(self, new_x=None, new_y=None):
+        self._dx = sym.diff(self.function, x)
+        self._dy = sym.diff(self.function, y)
+        self._f = sym.sympify(self.function)
+
+        if new_x is not None and new_y is not None:
+            self.cur_x = new_x
+            self._cur_y = new_y
         else:
             self.cur_x = random.uniform(self._min_x, self._max_x)
             self._cur_y = random.uniform(self._min_y, self._max_y)
@@ -152,18 +154,33 @@ def main():
     pr_slider.on_changed(update_precision)
 
 
+    def submit_function(function_string):
+        try:
+            sym.sympify(function_string)
+        except sym.SympifyError:
+            print("Bad function input!")
+            return
+
+        descender.function = function_string
+        descender.reset()
+        ax.clear()
+        start_drawing(function_string)
 
 
-    # Make data.
-    X = np.arange(args.min_x, args.max_x, 0.25)
-    Y = np.arange(args.min_y, args.max_y, 0.25)
-    X, Y = np.meshgrid(X, Y)
-    numpified = args.function.replace("x", "X").replace("y", "Y")
-    Z = eval(numpified)
+    text_axes = plt.axes([0.1, 0.9, 0.8, 0.03])
+    text_box = TextBox(text_axes, 'Evaluate', initial=args.function)
+    text_box.on_submit(submit_function)
 
-    def start_drawing():
+    def start_drawing(input_function):
+        # Make data.
+        X = np.arange(args.min_x, args.max_x, 0.25)
+        Y = np.arange(args.min_y, args.max_y, 0.25)
+        X, Y = np.meshgrid(X, Y)
+        numpified = input_function.replace("x", "X").replace("y", "Y")
+        Z = eval(numpified)
+
         ax.set_title(
-            f"{args.function} over [(x,y) | {args.min_x} <= x <= {args.max_x}, {args.min_y} <= y <= {args.max_y}]"
+            f"{input_function} over [(x,y) | {args.min_x} <= x <= {args.max_x}, {args.min_y} <= y <= {args.max_y}]"
         )
         ax.set_xlabel(r"x")
         ax.set_ylabel(r"y")
@@ -176,7 +193,7 @@ def main():
 
     # Plot the surface.
     def init():
-        start_drawing()
+        start_drawing(args.function)
         ax.view_init(elev=40, azim=0)
         return (fig,)
 
@@ -194,7 +211,7 @@ def main():
             max_text.set_text(f"min: {descender.cur_z:0.05f} after {descender.iters} steps")
             descender.reset()
             ax.clear()
-            start_drawing()
+            start_drawing(descender.function)
         return (fig,)
 
     ani = animation.FuncAnimation(fig, animate, init_func=init, interval=5)
